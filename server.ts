@@ -22,13 +22,15 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(express.urlencoded({extended: false}));
 app.use(express.json());
 
 passport.use(new LocalStrategy(
-    async (username: string, password: string, done: any) => {
+    async (name: string, password: string, done: any) => {
+        console.log(name, password);
         try{
             const user = await prisma.user.findFirstOrThrow({
-                where: {name: username}
+                where: {name: name}
             });
             console.log(user);
             const match = await bcrypt.compare(password, user.password);
@@ -93,6 +95,7 @@ app.post("/api/add", async (req: express.Request, res: express.Response) => {
 app.post("/api/login", (req: express.Request, res: express.Response, next) => {
     console.log(req.body);
     passport.authenticate("local", (err : any, user : User, info : any) => {
+        console.log(info);
         if (err) {
             return res.status(500).json({ message: "Internal Server Error" });
         }

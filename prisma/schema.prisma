@@ -16,4 +16,24 @@ model User {
   name  String  @unique
   password String
   quote String?
+  groups Group[] @relation("GroupUser")
+  fromChats Chat[] @relation("ChatUser")
+  toChats Chat[] @relation("ChatToUser")
+}
+
+model Group {
+  id Int @id @default(autoincrement())
+  name String @default("")
+  users User[] @relation("GroupUser")
+  chats Chat[] @relation("ChatGroup")
+}
+
+model Chat {
+  id Int @id @default(autoincrement())
+  from User @relation("ChatUser", fields: [userFromId], references: [id])
+  userFromId Int
+  to User? @relation("ChatToUser", fields: [userToId], references: [id])
+  userToId Int?
+  group Group @relation("ChatGroup", fields: [groupId], references: [id])
+  groupId Int
 }

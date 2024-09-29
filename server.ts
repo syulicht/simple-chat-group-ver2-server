@@ -110,15 +110,33 @@ app.post("/api/login", passport.authenticate('local'), (req : express.Request, r
 });
 
 
-app.get("/api/chatSpace/group/get", isAuthenticated, async(req : express.Request, res : express.Response, next) => {
+app.get("/api/chatSpace/group/get/fromUser", isAuthenticated, async(req : express.Request, res : express.Response, next) => {
     try {
-        //const groups = await prisma.group.findMany();
-        const data = {ok: true};
+        const userId = (req.user as User).id;
+        console.log(userId);
+        const groups = await prisma.group.findMany({
+            where : {users : {some: {id: userId}}}
+        });
+        const data = {groups : groups, ok: true};
+        console.log(data);
         res.json(data);
     } catch (e) {
         res.status(400).json({ error: e });
     }})
 
+    app.get("/api/chatSpace/chat/get/fromGroup", isAuthenticated, async(req : express.Request, res : express.Response, next) => {
+        try {
+            const userId = (req.user as User).id;
+            console.log(userId);
+            const groups = await prisma.group.findMany({
+                where : {users : {some: {id: userId}}}
+            });
+            const data = {groups : groups, ok: true};
+            console.log(data);
+            res.json(data);
+        } catch (e) {
+            res.status(400).json({ error: e });
+        }})    
 
 app.listen(port, () => {
   console.log(`port ${port} でサーバー起動中`);

@@ -2,7 +2,7 @@ import { Prisma, PrismaClient, User } from "@prisma/client";
 import express from "express";
 import Cors from "cors"
 import bcrypt from 'bcryptjs';
-import passport from 'passport';
+import passport, { authenticate } from 'passport';
 import session from 'express-session';
 import {Strategy as LocalStrategy} from 'passport-local';
 
@@ -20,21 +20,23 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
 }));
-app.use(passport.initialize());
-app.use(passport.session());
 app.use(express.urlencoded({extended: false}));
 app.use(express.json());
 
-passport.use(new LocalStrategy(
-    async (name: string, password: string, done: any) => {
-        console.log(name, password);
+passport.use(new LocalStrategy({
+        usernameField: 'name',
+        passwordField: 'password',
+        session: true,
+        passReqToCallback: false,
+
+    },
+    async(name: string, password: string, done: any) => {
+        console.log("localstrategy");
         try{
             const user = await prisma.user.findFirstOrThrow({
                 where: {name: name}
             });
-            console.log(user);
             const match = await bcrypt.compare(password, user.password);
-            console.log(match);
             if(!match){
                 return done(null, false, {message: "invalid credentials"});
             }
@@ -46,9 +48,20 @@ passport.use(new LocalStrategy(
     }
 ));
 
+app.use(passport.initialize());
+app.use(passport.session());
+
+
 passport.serializeUser((user: any, done) => {
     done(null, user.id);
 });
+
+const isAuthenticated = (req : express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    res.status(401).json({ message: "Unauthorized" });
+};
 
 passport.deserializeUser(async(id: number, done) => {
     try{
@@ -92,23 +105,19 @@ app.post("/api/add", async (req: express.Request, res: express.Response) => {
     }
 });
 
-app.post("/api/login", (req: express.Request, res: express.Response, next) => {
-    console.log(req.body);
-    passport.authenticate("local", (err : any, user : User, info : any) => {
-        console.log(info);
-        if (err) {
-            return res.status(500).json({ message: "Internal Server Error" });
-        }
-        if (!user) {
-            return res.status(401).json({ message: info.message });
-        }
-        req.logIn(user, (err) => {
-            if (err) {
-                return res.status(500).json({ message: "Internal Server Error" });
-            }
-            return res.json({ message: 'Login successful', user });
-        });
-    })(req, res, next);});
+app.post("/api/login", passport.authenticate('local'), (req : express.Request, res : express.Response, next) => {
+    res.json({ok: true});
+});
+
+
+app.get("/api/chatSpace/group/get", isAuthenticated, async(req : express.Request, res : express.Response, next) => {
+    try {
+        //const groups = await prisma.group.findMany();
+        const data = {ok: true};
+        res.json(data);
+    } catch (e) {
+        res.status(400).json({ error: e });
+    }})
 
 
 app.listen(port, () => {
